@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Точки наблюдения — Время видимости МКС</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+</head>
+<body>
+<div class="phone">
+    <div class="page">
+        <h1 class="title">Точки наблюдения</h1>
+
+        <form class="filter" action="/points" method="GET">
+            <div class="filter__field">
+                <label class="field__label" for="min_altitude">Высота над уровнем моря, от, м</label>
+                <input class="input input--control" type="text" inputmode="numeric" id="min_altitude" name="min_altitude"
+                       value="{{ .min_altitude }}" placeholder="0">
+            </div>
+            <button class="action-row action-row--button" type="submit" aria-label="Найти">
+                <span class="round-arrow round-arrow--search"></span>
+            </button>
+        </form>
+
+        {{ with .error }}<p class="notice">{{ . }}</p>{{ end }}
+
+        <div class="grid">
+            {{ range .points }}
+            <a class="card" href="/feed/{{ .ID }}">
+                <img class="card__image" src="{{ .ImageURL }}" alt="{{ .Name }}">
+                <div class="card__head">
+                    <h2 class="card__title">{{ .Name }}</h2>
+                    <span class="round-arrow round-arrow--small"></span>
+                </div>
+                <div class="card__foot">
+                    <span class="card__altitude">{{ .Altitude }} м</span>
+                    <span class="card__likes">
+                        <span class="card__heart"></span>{{ .Likes }}
+                    </span>
+                </div>
+            </a>
+            {{ else }}
+            <p class="empty">Ничего не найдено</p>
+            {{ end }}
+        </div>
+    </div>
+
+    {{ template "tabs" . }}
+</div>
+</body>
+</html>

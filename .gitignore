@@ -1,0 +1,8 @@
+/bin/
+/iss-visibility
+*.exe
+
+.env
+.idea/
+.vscode/
+.DS_Store

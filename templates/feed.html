@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Лента — Время видимости МКС</title>
+    <link rel="stylesheet" href="/static/styles/style.css">
+</head>
+<body>
+<div class="phone">
+    {{ with .point }}
+    <div class="feed">
+        <video class="feed__video" src="{{ .VideoURL }}" poster="{{ .ImageURL }}"
+               autoplay muted loop playsinline></video>
+        <div class="feed__shade"></div>
+
+        <div class="feed__content">
+            <div class="feed__info">
+                <h1 class="feed__title">{{ .Name }}</h1>
+
+                <details class="more">
+                    <summary class="more__summary">
+                        <p class="more__text">{{ .Description }}</p>
+                        <span class="more__toggle"></span>
+                    </summary>
+                </details>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat__value">{{ printf "%.4f" .LatAbs }}°</div>
+                        <div class="stat__label">Широта {{ .LatHemi }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat__value">{{ printf "%.4f" .LonAbs }}°</div>
+                        <div class="stat__label">Долгота {{ .LonHemi }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feed__actions">
+                <div class="action">
+                    <span class="action__icon action__icon--like"></span>
+                    <span class="action__label">{{ .Likes }}</span>
+                </div>
+                <a class="action" href="/feed/{{ .ID }}?next=true">
+                    <span class="action__icon action__icon--next"></span>
+                    <span class="action__label">Далее</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    {{ else }}
+    <p class="empty">{{ with .error }}{{ . }}{{ else }}Точка наблюдения не найдена{{ end }}</p>
+    {{ end }}
+
+    {{ template "tabs" . }}
+</div>
+</body>
+</html>
