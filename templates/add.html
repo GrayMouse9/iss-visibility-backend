@@ -11,12 +11,12 @@
         {{ with .point }}
         <h1 class="title">Новая точка наблюдения</h1>
 
-        <section class="field field--divided">
+        <section class="field">
             <div class="field__label">Изображение</div>
             <img class="media" src="{{ .ImageURL }}" alt="{{ .Name }}">
         </section>
 
-        <section class="field field--divided">
+        <section class="field">
             <div class="field__label">Видео</div>
             <video class="media" src="{{ .VideoURL }}" poster="{{ .ImageURL }}"
                    autoplay muted loop playsinline></video>
@@ -43,15 +43,6 @@
             </div>
         </section>
 
-        <section class="field">
-            <div class="field__label">Высота над уровнем моря, м</div>
-            <input class="input input--number" type="text" inputmode="numeric" value="{{ .Altitude }}">
-        </section>
-
-        <div class="action-row action-row--publish">
-            <span class="action-row__label">Опубликовать</span>
-            <span class="round-arrow"></span>
-        </div>
         {{ else }}
         <p class="empty">{{ with .error }}{{ . }}{{ else }}Черновик не найден{{ end }}</p>
         {{ end }}

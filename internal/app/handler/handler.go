@@ -11,7 +11,10 @@ import (
 	"iss-visibility/internal/app/repository"
 )
 
-const maxAltitude = 8849
+const (
+	minLatitudeLimit = -90.0
+	maxLatitudeLimit = 90.0
+)
 
 type Handler struct {
 	Repository *repository.Repository
@@ -27,10 +30,12 @@ type PointView struct {
 	ImageURL string
 	VideoURL string
 
-	LatAbs  float64
-	LatHemi string
-	LonAbs  float64
-	LonHemi string
+	LatAbs       float64
+	LatHemi      string
+	LatHemiShort string
+	LonAbs       float64
+	LonHemi      string
+	LonHemiShort string
 }
 
 func minioBaseURL() string {
@@ -43,13 +48,13 @@ func minioBaseURL() string {
 func view(p repository.ObservationPoint) PointView {
 	base := minioBaseURL()
 
-	lat, latHemi := p.Latitude, "N"
+	lat, latHemi, latShort := p.Latitude, "северная", "с. ш."
 	if lat < 0 {
-		lat, latHemi = -lat, "S"
+		lat, latHemi, latShort = -lat, "южная", "ю. ш."
 	}
-	lon, lonHemi := p.Longitude, "E"
+	lon, lonHemi, lonShort := p.Longitude, "восточная", "в. д."
 	if lon < 0 {
-		lon, lonHemi = -lon, "W"
+		lon, lonHemi, lonShort = -lon, "западная", "з. д."
 	}
 
 	return PointView{
@@ -59,8 +64,10 @@ func view(p repository.ObservationPoint) PointView {
 		VideoURL:         base + "/" + p.VideoKey,
 		LatAbs:           lat,
 		LatHemi:          latHemi,
+		LatHemiShort:     latShort,
 		LonAbs:           lon,
 		LonHemi:          lonHemi,
+		LonHemiShort:     lonShort,
 	}
 }
 
@@ -125,38 +132,38 @@ func (h *Handler) GetDraft(c *gin.Context) {
 	})
 }
 
-func (h *Handler) GetPoints(c *gin.Context) {
-	minAltitudeQuery := strings.TrimSpace(c.Query("min_altitude"))
+func (h *Handler) GetObservationPoints(c *gin.Context) {
+	minLatitudeQuery := strings.TrimSpace(c.Query("min_latitude"))
 
-	minAltitude := 0
+	minLatitude := minLatitudeLimit
 	filterError := ""
 
-	if minAltitudeQuery != "" {
-		value, err := strconv.Atoi(minAltitudeQuery)
+	if minLatitudeQuery != "" {
+		value, err := strconv.ParseFloat(minLatitudeQuery, 64)
 		switch {
 		case err != nil:
-			filterError = "Высота должна быть целым числом, например 900"
-		case value < 0:
-			filterError = "Высота над уровнем моря не может быть отрицательной"
-		case value > maxAltitude:
-			filterError = "Слишком большое значение: высочайшая точка суши — 8849 м"
+			filterError = "Широта должна быть целым числом, например 55"
+		case value < minLatitudeLimit || value > maxLatitudeLimit:
+			filterError = "Широта лежит в пределах от −90° до 90°"
 		default:
-			minAltitude = value
+			minLatitude = value
 		}
 	}
 
-	points := h.Repository.PublishedByMinAltitude(minAltitude)
+	points := h.Repository.PublishedByMinLatitude(minLatitude)
 
 	views := make([]PointView, 0, len(points))
 	for _, p := range points {
 		views = append(views, view(p))
 	}
 
-	c.HTML(http.StatusOK, "points.html", gin.H{
-		"points": views,
+	fill := (minLatitude - minLatitudeLimit) / (maxLatitudeLimit - minLatitudeLimit) * 100
 
-		"min_altitude": minAltitudeQuery,
-		"active":       "points",
+	c.HTML(http.StatusOK, "observation_points.html", gin.H{
+		"points":       views,
+		"min_latitude": minLatitude,
+		"fill":         fill,
+		"active":       "observation_points",
 		"error":        filterError,
 	})
 }

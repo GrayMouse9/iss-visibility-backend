@@ -16,7 +16,6 @@ type ObservationPoint struct {
 
 	Latitude  float64
 	Longitude float64
-	Altitude  int
 
 	ImageKey string
 	VideoKey string
@@ -25,37 +24,37 @@ type ObservationPoint struct {
 }
 
 type Repository struct {
-	points []ObservationPoint
+	observationPoints []ObservationPoint
 }
 
 func NewRepository() (*Repository, error) {
-	return &Repository{points: collection()}, nil
+	return &Repository{observationPoints: observationPoints()}, nil
 }
 
 func (r *Repository) Published() []ObservationPoint {
-	result := make([]ObservationPoint, 0, len(r.points))
-	for _, p := range r.points {
-		if p.Status == StatusPublished {
-			result = append(result, p)
+	result := make([]ObservationPoint, 0, len(r.observationPoints))
+	for _, point := range r.observationPoints {
+		if point.Status == StatusPublished {
+			result = append(result, point)
 		}
 	}
 	return result
 }
 
-func (r *Repository) PublishedByMinAltitude(minAltitude int) []ObservationPoint {
-	result := make([]ObservationPoint, 0, len(r.points))
-	for _, p := range r.Published() {
-		if p.Altitude >= minAltitude {
-			result = append(result, p)
+func (r *Repository) PublishedByMinLatitude(minLatitude float64) []ObservationPoint {
+	result := make([]ObservationPoint, 0, len(r.observationPoints))
+	for _, point := range r.Published() {
+		if point.Latitude >= minLatitude {
+			result = append(result, point)
 		}
 	}
 	return result
 }
 
 func (r *Repository) PublishedByID(id int) (ObservationPoint, bool) {
-	for _, p := range r.Published() {
-		if p.ID == id {
-			return p, true
+	for _, point := range r.Published() {
+		if point.ID == id {
+			return point, true
 		}
 	}
 	return ObservationPoint{}, false
@@ -74,92 +73,102 @@ func (r *Repository) NextPublished(id int) (ObservationPoint, bool) {
 	if len(published) == 0 {
 		return ObservationPoint{}, false
 	}
-	for i, p := range published {
-		if p.ID == id {
+	for i, point := range published {
+		if point.ID == id {
 			return published[(i+1)%len(published)], true
 		}
 	}
-	return published[0], true
+	return ObservationPoint{}, false
+
 }
 
 func (r *Repository) Draft() (ObservationPoint, bool) {
-	for _, p := range r.points {
-		if p.Status == StatusDraft {
-			return p, true
+	for _, point := range r.observationPoints {
+		if point.Status == StatusDraft {
+			return point, true
 		}
 	}
 	return ObservationPoint{}, false
 }
 
-func collection() []ObservationPoint {
+func observationPoints() []ObservationPoint {
 	return []ObservationPoint{
 		{
 			ID:          1,
-			Name:        "МГТУ им. Н.Э. Баумана, Москва",
-			Description: "Учебная площадка наблюдения в центре Москвы. Световое загрязнение ограничивает видимость слабых объектов, но МКС при благоприятном пролёте достигает −3,5 звёздной величины и уверенно видна невооружённым глазом.",
+			Name:        "Обсерватория Джемини-Север, Мауна-Кеа",
+			Description: "Восьмиметровый телескоп на вершине вулкана, 4200 м над уровнем моря. Выше обсерватории остаётся лишь 40 % воздуха, и он почти не искажает изображение.",
 			Status:      StatusPublished,
-			Latitude:    55.7660,
-			Longitude:   37.6849,
-			Altitude:    150,
-			ImageKey:    "bmstu.jpg",
-			VideoKey:    "bmstu.mp4",
-			LikedBy:     userIDs(128),
+			Latitude:    19.8207,
+			Longitude:   -155.4681,
+			ImageKey:    "maunakea.jpg",
+			VideoKey:    "maunakea.mp4",
+			LikedBy:     []int{2, 5, 9, 14, 21, 30, 38},
 		},
 		{
 			ID:          2,
-			Name:        "Пулковская обсерватория, Санкт-Петербург",
-			Description: "Старейшая астрономическая обсерватория России, основана в 1839 году. На широте 59,8° летом наступают белые ночи, поэтому окно наблюдения МКС смещается.",
+			Name:        "Национальная обсерватория Китт-Пик, Аризона",
+			Description: "Более двадцати телескопов на одной горе в пустыне Сонора. Ясных ночей здесь около 260 в году, что делает площадку удобной для регулярных наблюдений.",
 			Status:      StatusPublished,
-			Latitude:    59.7714,
-			Longitude:   30.3264,
-			Altitude:    75,
-			ImageKey:    "pulkovo.jpg",
-			VideoKey:    "pulkovo.mp4",
-			LikedBy:     userIDs(64),
+			Latitude:    31.9583,
+			Longitude:   -111.5967,
+			ImageKey:    "kittpeak.jpg",
+			VideoKey:    "kittpeak.mp4",
+			LikedBy:     []int{1, 6, 13, 22, 27},
 		},
 		{
-			ID:          9,
-			Name:        "Комплекс дальней космической связи Голдстоун, Калифорния",
-			Description: "Станция дальней космической связи NASA в пустыне Мохаве на высоте 900 м. Сухой воздух и удалённость от городов дают почти полное отсутствие засветки, поэтому пролёт МКС прослеживается здесь от горизонта до горизонта.",
+			ID:          3,
+			Name:        "Обсерватория ALMA, плато Чахнантор",
+			Description: "Шестьдесят шесть антенн на высоте 5000 м — самая высокогорная обсерватория мира. Воздух предельно сух, помех для наблюдения практически нет.",
 			Status:      StatusPublished,
-			Latitude:    35.4267,
-			Longitude:   -116.8900,
-			Altitude:    900,
-			ImageKey:    "goldstone.jpg",
-			VideoKey:    "goldstone.mp4",
-			LikedBy:     userIDs(128),
+			Latitude:    -23.0294,
+			Longitude:   -67.7548,
+			ImageKey:    "alma.jpg",
+			VideoKey:    "alma.mp4",
+			LikedBy:     []int{3, 8, 11, 19, 25, 34, 40},
 		},
 		{
-			ID:          7,
+			ID:          4,
+			Name:        "Паранальская обсерватория, Атакама",
+			Description: "Четыре восьмиметровых телескопа в пустыне Атакама. Осадки здесь почти не выпадают, а ясных ночей больше трёхсот в году.",
+			Status:      StatusPublished,
+			Latitude:    -24.6275,
+			Longitude:   -70.4044,
+			ImageKey:    "paranal.jpg",
+			VideoKey:    "paranal.mp4",
+			LikedBy:     []int{4, 10, 17, 23, 29, 36},
+		},
+		{
+			ID:          5,
+			Name:        "Обсерватория Ла-Силья, Чили",
+			Description: "Первая площадка Южной европейской обсерватории, работает с 1969 года. До ближайшего города сотни километров, поэтому небо здесь остаётся полностью тёмным.",
+			Status:      StatusPublished,
+			Latitude:    -29.2567,
+			Longitude:   -70.7300,
+			ImageKey:    "lasilla.jpg",
+			VideoKey:    "lasilla.mp4",
+			LikedBy:     []int{7, 12, 20, 31},
+		},
+		{
+			ID:          6,
 			Name:        "Байконур, космодром",
-			Description: "Крупнейший космодром мира, стартовая площадка пилотируемых полётов к МКС.",
+			Description: "Крупнейший космодром мира, стартовая площадка пилотируемых полётов к МКС. Ровная степь открывает обзор до самого горизонта во все стороны.",
 			Status:      StatusDraft,
 			Latitude:    45.9646,
 			Longitude:   63.3052,
-			Altitude:    90,
 			ImageKey:    "baikonur.jpg",
 			VideoKey:    "baikonur.mp4",
-			LikedBy:     nil,
+			LikedBy:     []int{},
 		},
 		{
-			ID:          8,
-			Name:        "Байкальская астрофизическая обсерватория, Листвянка",
-			Description: "Солнечный телескоп на берегу Байкала.",
+			ID:          7,
+			Name:        "МГТУ им. Н. Э. Баумана, Москва",
+			Description: "Учебная площадка в центре Москвы. Городская засветка гасит слабые объекты, но МКС достигает −3,5 звёздной величины и видна невооружённым глазом.",
 			Status:      StatusDeleted,
-			Latitude:    51.8464,
-			Longitude:   104.8919,
-			Altitude:    680,
-			ImageKey:    "baikal.jpg",
-			VideoKey:    "baikal.mp4",
-			LikedBy:     userIDs(17),
+			Latitude:    55.7660,
+			Longitude:   37.6849,
+			ImageKey:    "bmstu.jpg",
+			VideoKey:    "bmstu.mp4",
+			LikedBy:     []int{15, 18, 26, 33},
 		},
 	}
-}
-
-func userIDs(count int) []int {
-	ids := make([]int, count)
-	for i := range ids {
-		ids[i] = i + 1
-	}
-	return ids
 }

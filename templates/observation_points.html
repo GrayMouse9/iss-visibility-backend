@@ -10,11 +10,18 @@
     <div class="page">
         <h1 class="title">Точки наблюдения</h1>
 
-        <form class="filter" action="/points" method="GET">
+        <form class="filter" action="/observation_points" method="GET">
             <div class="filter__field">
-                <label class="field__label" for="min_altitude">Высота над уровнем моря, от, м</label>
-                <input class="input input--control" type="text" inputmode="numeric" id="min_altitude" name="min_altitude"
-                       value="{{ .min_altitude }}" placeholder="0">
+                <label class="field__label" for="min_latitude">Широта, от</label>
+                <div class="slider-wrap" style="--fill: {{ printf "%.2f" .fill }}">
+                    <output class="slider__bubble">{{ printf "%.0f" .min_latitude }}°</output>
+                    <input class="slider" type="range" id="min_latitude" name="min_latitude"
+                           min="-90" max="90" step="1" value="{{ printf "%.0f" .min_latitude }}">
+                    <div class="filter__scale">
+                        <span>−90° ю. ш.</span>
+                        <span>90° с. ш.</span>
+                    </div>
+                </div>
             </div>
             <button class="action-row action-row--button" type="submit" aria-label="Найти">
                 <span class="round-arrow round-arrow--search"></span>
@@ -32,7 +39,7 @@
                     <span class="round-arrow round-arrow--small"></span>
                 </div>
                 <div class="card__foot">
-                    <span class="card__altitude">{{ .Altitude }} м</span>
+                    <span class="card__latitude">{{ printf "%.2f" .LatAbs }}° {{ .LatHemiShort }}</span>
                     <span class="card__likes">
                         <span class="card__heart"></span>{{ .Likes }}
                     </span>

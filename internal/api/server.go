@@ -27,7 +27,7 @@ func StartServer() {
 	r.GET("/feed", h.GetFeed)
 	r.GET("/feed/:id", h.GetFeed)
 	r.GET("/add", h.GetDraft)
-	r.GET("/points", h.GetPoints)
+	r.GET("/observation_points", h.GetObservationPoints)
 
 	r.Run()
 	log.Println("Server down")
