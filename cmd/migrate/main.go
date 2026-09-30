@@ -24,7 +24,7 @@ func main() {
 	err = db.AutoMigrate(
 		&ds.User{},
 		&ds.ObservationPoint{},
-		&ds.PointLike{},
+		&ds.ObservationPointLike{},
 	)
 	if err != nil {
 		log.Fatalf("не удалось выполнить миграцию: %v", err)

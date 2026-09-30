@@ -1,3 +1,3 @@
 ServiceHost = "localhost"
-ServicePort = 3000
-MinioPublicURL = "http://localhost:9100/iss-visibility"
+ServicePort = 3001
+MinioPublicURL = "http://localhost:9200/iss-visibility"

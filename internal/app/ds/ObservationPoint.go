@@ -3,9 +3,9 @@ package ds
 import "time"
 
 const (
-	PointDraft     = "черновик"
-	PointPublished = "опубликован"
-	PointDeleted   = "удален"
+	StatusDraft     = "черновик"
+	StatusPublished = "опубликован"
+	StatusDeleted   = "удален"
 )
 
 type ObservationPoint struct {

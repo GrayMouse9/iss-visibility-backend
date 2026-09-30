@@ -35,7 +35,7 @@ func main() {
 	}
 
 	// Очистка таблиц, чтобы команду можно было запускать повторно.
-	err = db.Exec(`TRUNCATE point_likes, observation_points, users
+	err = db.Exec(`TRUNCATE observation_point_likes, observation_points, users
 	               RESTART IDENTITY CASCADE`).Error
 	if err != nil {
 		log.Fatalf("не удалось очистить таблицы: %v", err)
@@ -62,7 +62,7 @@ func main() {
 		{
 			Name:        "Обсерватория Джемини-Север, Мауна-Кеа",
 			Description: "Восьмиметровый телескоп на вершине вулкана, 4200 м над уровнем моря. Выше обсерватории остаётся лишь 40 % воздуха, и он почти не искажает изображение.",
-			Status:      ds.PointPublished,
+			Status:      ds.StatusPublished,
 			ImageURL:    media + "/maunakea.jpg",
 			VideoURL:    media + "/maunakea.mp4",
 			Latitude:    19.8207,
@@ -74,7 +74,7 @@ func main() {
 		{
 			Name:        "Национальная обсерватория Китт-Пик, Аризона",
 			Description: "Более двадцати телескопов на одной горе в пустыне Сонора. Ясных ночей здесь около 260 в году, что делает площадку удобной для регулярных наблюдений.",
-			Status:      ds.PointPublished,
+			Status:      ds.StatusPublished,
 			ImageURL:    media + "/kittpeak.jpg",
 			VideoURL:    media + "/kittpeak.mp4",
 			Latitude:    31.9583,
@@ -84,9 +84,22 @@ func main() {
 			CreatorID:   users[0].ID,
 		},
 		{
+			// Удалена намеренно: создаёт пропуск в середине, на нём видно работу кнопки «Далее».
+			Name:        "МГТУ им. Н. Э. Баумана, Москва",
+			Description: "Учебная площадка в центре Москвы. Городская засветка гасит слабые объекты, но МКС достигает −3,5 звёздной величины и видна невооружённым глазом.",
+			Status:      ds.StatusDeleted,
+			ImageURL:    media + "/bmstu.jpg",
+			VideoURL:    media + "/bmstu.mp4",
+			Latitude:    55.7660,
+			Longitude:   37.6849,
+			DateCreated: created,
+			DateFormed:  ptr(formed),
+			CreatorID:   users[0].ID,
+		},
+		{
 			Name:        "Обсерватория ALMA, плато Чахнантор",
 			Description: "Шестьдесят шесть антенн на высоте 5000 м — самая высокогорная обсерватория мира. Воздух предельно сух, помех для наблюдения практически нет.",
-			Status:      ds.PointPublished,
+			Status:      ds.StatusPublished,
 			ImageURL:    media + "/alma.jpg",
 			VideoURL:    media + "/alma.mp4",
 			Latitude:    -23.0294,
@@ -98,7 +111,7 @@ func main() {
 		{
 			Name:        "Паранальская обсерватория, Атакама",
 			Description: "Четыре восьмиметровых телескопа в пустыне Атакама. Осадки здесь почти не выпадают, а ясных ночей больше трёхсот в году.",
-			Status:      ds.PointPublished,
+			Status:      ds.StatusPublished,
 			ImageURL:    media + "/paranal.jpg",
 			VideoURL:    media + "/paranal.mp4",
 			Latitude:    -24.6275,
@@ -110,7 +123,7 @@ func main() {
 		{
 			Name:        "Обсерватория Ла-Силья, Чили",
 			Description: "Первая площадка Южной европейской обсерватории, работает с 1969 года. До ближайшего города сотни километров, поэтому небо здесь остаётся полностью тёмным.",
-			Status:      ds.PointPublished,
+			Status:      ds.StatusPublished,
 			ImageURL:    media + "/lasilla.jpg",
 			VideoURL:    media + "/lasilla.mp4",
 			Latitude:    -29.2567,
@@ -122,22 +135,10 @@ func main() {
 		{
 			// Ссылки пустые: на страницах подставятся файлы по умолчанию.
 			Name:        "МГТУ им. Н. Э. Баумана",
-			Status:      ds.PointDraft,
+			Status:      ds.StatusDraft,
 			Latitude:    45.9646,
 			Longitude:   63.3052,
 			DateCreated: time.Now(),
-			CreatorID:   users[0].ID,
-		},
-		{
-			Name:        "МГТУ им. Н. Э. Баумана, Москва",
-			Description: "Учебная площадка в центре Москвы. Городская засветка гасит слабые объекты, но МКС достигает −3,5 звёздной величины и видна невооружённым глазом.",
-			Status:      ds.PointDeleted,
-			ImageURL:    media + "/bmstu.jpg",
-			VideoURL:    media + "/bmstu.mp4",
-			Latitude:    55.7660,
-			Longitude:   37.6849,
-			DateCreated: created,
-			DateFormed:  ptr(formed),
 			CreatorID:   users[0].ID,
 		},
 	}
@@ -145,18 +146,18 @@ func main() {
 		log.Fatalf("не удалось создать точки наблюдения: %v", err)
 	}
 
-	likeCounts := []int{7, 5, 7, 6, 4, 0, 4}
+	likeCounts := []int{7, 5, 4, 7, 6, 4, 0}
 
-	var likes []ds.PointLike
+	var likes []ds.ObservationPointLike
 	for i, point := range points {
 		for j := 0; j < likeCounts[i] && j < len(users); j++ {
-			likes = append(likes, ds.PointLike{
-				UserID:  users[j].ID,
-				PointID: point.ID,
+			likes = append(likes, ds.ObservationPointLike{
+				UserID:             users[j].ID,
+				ObservationPointID: point.ID,
 			})
 		}
 	}
-	if err := db.Omit("User", "Point").Create(&likes).Error; err != nil {
+	if err := db.Omit("User", "ObservationPoint").Create(&likes).Error; err != nil {
 		log.Fatalf("не удалось создать лайки: %v", err)
 	}
 

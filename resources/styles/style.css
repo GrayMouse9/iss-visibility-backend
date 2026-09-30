@@ -627,6 +627,13 @@ body {
     opacity: .9;
 }
 
+/* Кнопка под карточкой: тот же стиль, что и у остальных, только мельче. */
+.button--small {
+    margin-top: 0;
+    padding: 8px 0;
+    font-size: 12px;
+}
+
 .card-wrap {
     display: flex;
     flex-direction: column;
@@ -637,22 +644,28 @@ body {
     flex: 1;
 }
 
-.card-delete__button {
-    width: 100%;
-    padding: 8px 0;
-    font: inherit;
-    font-size: 12px;
+
+/* Выбор файла: свой элемент вместо кнопки браузера. Клик по label открывает диалог. */
+.file {
+    display: block;
+    margin-top: 12px;
+    padding: 10px 0;
+    font-size: 13px;
     font-weight: 700;
-    color: var(--muted);
+    text-align: center;
+    color: var(--accent);
     background: var(--invert);
-    border: none;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
+    border: 1px solid var(--field);
+    border-radius: 16px;
     cursor: pointer;
 }
 
-.card-delete__button:hover {
-    color: var(--invert);
-    background: var(--danger);
+.file:hover {
+    background: var(--bg);
 }
+
+.file input {
+    display: none;
+}
+
 

@@ -21,12 +21,12 @@ func NewHandler(r *repository.Repository) *Handler {
 func (h *Handler) RegisterHandler(router *gin.Engine) {
 	router.GET("/feed", h.GetFeed)
 	router.GET("/feed/:id", h.GetFeed)
-	router.GET("/add", h.GetDraft)
+	router.GET("/add", h.GetObservationPointDraft)
 	router.GET("/observation_points", h.GetObservationPoints)
 
-	router.POST("/points", h.CreateDraft)
-	router.POST("/points/publish", h.PublishPoint)
-	router.POST("/points/delete", h.DeletePoint)
+	router.POST("/observation_points", h.CreateObservationPointDraft)
+	router.POST("/observation_points/publish", h.PublishObservationPoint)
+	router.POST("/observation_points/delete", h.DeleteObservationPoint)
 }
 
 // RegisterStatic То же самое, что и с маршрутами, регистрируем статику

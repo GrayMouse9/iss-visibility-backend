@@ -28,8 +28,8 @@ const (
 )
 
 // ImageURL и VideoURL перекрывают поля вложенной структуры: в них подставлены файлы по умолчанию.
-type PointView struct {
-	repository.PointWithLikes
+type ObservationPointView struct {
+	repository.ObservationPointWithLikes
 	ImageURL string
 	VideoURL string
 
@@ -41,7 +41,7 @@ type PointView struct {
 	LonHemiShort string
 }
 
-func (h *Handler) view(p repository.PointWithLikes) PointView {
+func (h *Handler) observationPointView(p repository.ObservationPointWithLikes) ObservationPointView {
 	image := p.ImageURL
 	if image == "" {
 		image = defaultImageURL
@@ -60,29 +60,29 @@ func (h *Handler) view(p repository.PointWithLikes) PointView {
 		lon, lonHemi, lonShort = -lon, "западная", "з. д."
 	}
 
-	return PointView{
-		PointWithLikes: p,
-		ImageURL:       image,
-		VideoURL:       video,
-		LatAbs:         lat,
-		LatHemi:        latHemi,
-		LatHemiShort:   latShort,
-		LonAbs:         lon,
-		LonHemi:        lonHemi,
-		LonHemiShort:   lonShort,
+	return ObservationPointView{
+		ObservationPointWithLikes: p,
+		ImageURL:                  image,
+		VideoURL:                  video,
+		LatAbs:                    lat,
+		LatHemi:                   latHemi,
+		LatHemiShort:              latShort,
+		LonAbs:                    lon,
+		LonHemi:                   lonHemi,
+		LonHemiShort:              lonShort,
 	}
 }
 
 func (h *Handler) GetFeed(ctx *gin.Context) {
 	var (
-		point repository.PointWithLikes
+		point repository.ObservationPointWithLikes
 		err   error
 	)
 
 	idParam := ctx.Param("id")
 
 	if idParam == "" {
-		point, err = h.Repository.FirstPublishedPoint()
+		point, err = h.Repository.FirstPublishedObservationPoint()
 	} else {
 		id, convErr := strconv.Atoi(idParam)
 		if convErr != nil || id <= 0 {
@@ -95,9 +95,9 @@ func (h *Handler) GetFeed(ctx *gin.Context) {
 		}
 
 		if ctx.Query("next") == "true" {
-			point, err = h.Repository.NextPublishedPoint(uint(id))
+			point, err = h.Repository.NextPublishedObservationPoint(uint(id))
 		} else {
-			point, err = h.Repository.PublishedPointByID(uint(id))
+			point, err = h.Repository.PublishedObservationPointByID(uint(id))
 		}
 	}
 
@@ -120,7 +120,7 @@ func (h *Handler) GetFeed(ctx *gin.Context) {
 	}
 
 	ctx.HTML(http.StatusOK, "feed.page.html", gin.H{
-		"point":  h.view(point),
+		"point":  h.observationPointView(point),
 		"active": "feed",
 	})
 }
@@ -128,23 +128,23 @@ func (h *Handler) GetFeed(ctx *gin.Context) {
 func (h *Handler) GetObservationPoints(ctx *gin.Context) {
 	minLatitude, filterError := parseMinLatitude(ctx.Query("min_latitude"))
 
-	points, err := h.Repository.PublishedPoints(minLatitude)
+	points, err := h.Repository.PublishedObservationPoints(minLatitude)
 	if err != nil {
 		logrus.Errorf("список точек: %v", err)
 		filterError = "Ошибка обращения к базе данных"
 	}
 
-	views := make([]PointView, 0, len(points))
+	views := make([]ObservationPointView, 0, len(points))
 	for _, p := range points {
-		views = append(views, h.view(p))
+		views = append(views, h.observationPointView(p))
 	}
 
 	fill := (minLatitude - minLatitudeLimit) / (maxLatitudeLimit - minLatitudeLimit) * 100
 
 	ctx.HTML(http.StatusOK, "observation_points.page.html", gin.H{
 		"points":       views,
-		"min_latitude": minLatitude,
-		"fill":         fill,
+		"min_latitude": strconv.FormatFloat(minLatitude, 'f', 0, 64),
+		"fill":         strconv.FormatFloat(fill, 'f', 2, 64),
 		"active":       "observation_points",
 		"error":        filterError,
 	})
@@ -167,18 +167,20 @@ func parseMinLatitude(query string) (float64, string) {
 	return value, ""
 }
 
-func (h *Handler) GetDraft(ctx *gin.Context) {
-	h.renderDraft(ctx, http.StatusOK, "")
+func (h *Handler) GetObservationPointDraft(ctx *gin.Context) {
+	h.renderObservationPointDraft(ctx, http.StatusOK, "")
 }
 
 // Черновика нет — шаблон показывает форму создания, это не ошибка.
-func (h *Handler) renderDraft(ctx *gin.Context, status int, message string) {
-	point, err := h.Repository.DraftPoint(CurrentUserID)
+func (h *Handler) renderObservationPointDraft(ctx *gin.Context, status int, message string) {
+	point, err := h.Repository.DraftObservationPoint(CurrentUserID)
 
 	switch {
 	case errors.Is(err, repository.ErrNotFound):
 		ctx.HTML(status, "add.page.html", gin.H{
 			"point":  nil,
+			"image":  defaultImageURL,
+			"video":  defaultVideoURL,
 			"active": "add",
 			"error":  message,
 		})
@@ -187,6 +189,8 @@ func (h *Handler) renderDraft(ctx *gin.Context, status int, message string) {
 		logrus.Errorf("черновик: %v", err)
 		ctx.HTML(http.StatusInternalServerError, "add.page.html", gin.H{
 			"point":  nil,
+			"image":  defaultImageURL,
+			"video":  defaultVideoURL,
 			"active": "add",
 			"error":  "Ошибка обращения к базе данных",
 		})
@@ -194,22 +198,28 @@ func (h *Handler) renderDraft(ctx *gin.Context, status int, message string) {
 	}
 
 	ctx.HTML(status, "add.page.html", gin.H{
-		"point":  h.view(point),
+		"point":  h.observationPointView(point),
 		"active": "add",
 		"error":  message,
 	})
 }
 
-func (h *Handler) CreateDraft(ctx *gin.Context) {
+func (h *Handler) CreateObservationPointDraft(ctx *gin.Context) {
 	name := strings.TrimSpace(ctx.PostForm("name"))
 	if name == "" {
-		h.renderDraft(ctx, http.StatusBadRequest, "Введите название точки наблюдения")
+		h.renderObservationPointDraft(ctx, http.StatusBadRequest, "Введите название точки наблюдения")
 		return
 	}
 
-	if err := h.Repository.CreateDraft(CurrentUserID, name); err != nil {
+	description := strings.TrimSpace(ctx.PostForm("description"))
+	if description == "" {
+		h.renderObservationPointDraft(ctx, http.StatusBadRequest, "Добавьте краткое описание")
+		return
+	}
+
+	if err := h.Repository.CreateObservationPointDraft(CurrentUserID, name, description); err != nil {
 		logrus.Errorf("создание черновика: %v", err)
-		h.renderDraft(ctx, http.StatusInternalServerError,
+		h.renderObservationPointDraft(ctx, http.StatusInternalServerError,
 			"Не удалось создать черновик: возможно, он уже есть")
 		return
 	}
@@ -217,39 +227,33 @@ func (h *Handler) CreateDraft(ctx *gin.Context) {
 	ctx.Redirect(http.StatusSeeOther, "/add")
 }
 
-func (h *Handler) PublishPoint(ctx *gin.Context) {
-	id, err := strconv.Atoi(ctx.PostForm("point_id"))
+func (h *Handler) PublishObservationPoint(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.PostForm("observation_point_id"))
 	if err != nil || id <= 0 {
-		h.renderDraft(ctx, http.StatusBadRequest, "Неверный идентификатор точки")
-		return
-	}
-
-	description := strings.TrimSpace(ctx.PostForm("description"))
-	if description == "" {
-		h.renderDraft(ctx, http.StatusBadRequest, "Добавьте краткое описание")
+		h.renderObservationPointDraft(ctx, http.StatusBadRequest, "Неверный идентификатор точки")
 		return
 	}
 
 	latitude, err := parseCoordinate(ctx.PostForm("latitude"), minLatitudeLimit, maxLatitudeLimit)
 	if err != nil {
-		h.renderDraft(ctx, http.StatusBadRequest, "Широта лежит в пределах от −90° до 90°")
+		h.renderObservationPointDraft(ctx, http.StatusBadRequest, "Широта лежит в пределах от −90° до 90°")
 		return
 	}
 
 	longitude, err := parseCoordinate(ctx.PostForm("longitude"), minLongitudeLimit, maxLongitudeLimit)
 	if err != nil {
-		h.renderDraft(ctx, http.StatusBadRequest, "Долгота лежит в пределах от −180° до 180°")
+		h.renderObservationPointDraft(ctx, http.StatusBadRequest, "Долгота лежит в пределах от −180° до 180°")
 		return
 	}
 
-	err = h.Repository.PublishPoint(uint(id), description, latitude, longitude)
+	err = h.Repository.PublishObservationPoint(uint(id), latitude, longitude)
 	switch {
 	case errors.Is(err, repository.ErrNotFound):
-		h.renderDraft(ctx, http.StatusNotFound, "Черновик не найден")
+		h.renderObservationPointDraft(ctx, http.StatusNotFound, "Черновик не найден")
 		return
 	case err != nil:
 		logrus.Errorf("публикация точки: %v", err)
-		h.renderDraft(ctx, http.StatusInternalServerError, "Ошибка обращения к базе данных")
+		h.renderObservationPointDraft(ctx, http.StatusInternalServerError, "Ошибка обращения к базе данных")
 		return
 	}
 
@@ -272,15 +276,15 @@ func parseCoordinate(raw string, min, max float64) (float64, error) {
 }
 
 // Логическое удаление: SQL-запрос без ORM.
-func (h *Handler) DeletePoint(ctx *gin.Context) {
+func (h *Handler) DeleteObservationPoint(ctx *gin.Context) {
 	// считываем значение из формы, которую мы добавили в шаблон
-	id, err := strconv.Atoi(ctx.PostForm("point_id"))
+	id, err := strconv.Atoi(ctx.PostForm("observation_point_id"))
 	if err != nil || id <= 0 {
 		h.errorHandler(ctx, http.StatusBadRequest, errors.New("неверный идентификатор точки"))
 		return
 	}
 
-	if err := h.Repository.DeletePoint(uint(id)); err != nil {
+	if err := h.Repository.DeleteObservationPoint(uint(id)); err != nil {
 		h.errorHandler(ctx, http.StatusInternalServerError, err)
 		return
 	}

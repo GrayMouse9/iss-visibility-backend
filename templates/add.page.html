@@ -13,9 +13,9 @@
         {{ with .error }}<p class="notice">{{ . }}</p>{{ end }}
 
         {{ with .point }}
-        {{/* Черновик уже есть — показываем его и предлагаем опубликовать. */}}
-        <form action="/points/publish" method="POST">
-            <input type="hidden" name="point_id" value="{{ .ID }}">
+        {{/* Черновик уже есть: медиа и текст только для просмотра, вводятся координаты. */}}
+        <form action="/observation_points/publish" method="POST">
+            <input type="hidden" name="observation_point_id" value="{{ .ID }}">
 
             <section class="field">
                 <div class="field__label">Изображение</div>
@@ -35,8 +35,7 @@
 
             <section class="field">
                 <div class="field__label">Краткое описание</div>
-                <textarea class="input input--multiline" name="description"
-                          rows="2">{{ .Description }}</textarea>
+                <textarea class="input input--multiline" rows="2" readonly>{{ .Description }}</textarea>
             </section>
 
             <section class="field field--row">
@@ -56,8 +55,27 @@
         </form>
 
         {{ else }}
-        {{/* Черновика нет — форма создания. У полей файлов нет name, на сервер они не уходят. */}}
-        <form action="/points" method="POST">
+        {{/* Черновика нет: то же медиа сверху, но с выбором файла. У полей нет name — на сервер они не уходят. */}}
+        <form action="/observation_points" method="POST">
+            <section class="field">
+                <div class="field__label">Изображение</div>
+                <img class="media" src="{{ $.image }}" alt="Изображение по умолчанию">
+                <label class="file">
+                    Выбрать изображение
+                    <input type="file" accept="image/*">
+                </label>
+            </section>
+
+            <section class="field">
+                <div class="field__label">Видео</div>
+                <video class="media" src="{{ $.video }}" poster="{{ $.image }}"
+                       autoplay muted loop playsinline></video>
+                <label class="file">
+                    Выбрать видео
+                    <input type="file" accept="video/*">
+                </label>
+            </section>
+
             <section class="field">
                 <div class="field__label">Название</div>
                 <input class="input" type="text" name="name"
@@ -65,13 +83,9 @@
             </section>
 
             <section class="field">
-                <div class="field__label">Изображение</div>
-                <input class="input" type="file" accept="image/*">
-            </section>
-
-            <section class="field">
-                <div class="field__label">Видео</div>
-                <input class="input" type="file" accept="video/*">
+                <div class="field__label">Краткое описание</div>
+                <textarea class="input input--multiline" name="description"
+                          rows="2" placeholder="Чем примечательна площадка"></textarea>
             </section>
 
             <button class="button" type="submit">Далее</button>
