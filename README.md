@@ -55,14 +55,22 @@ go run ./cmd/iss-visibility
 ## Структура
 
 ```
-cmd/iss-visibility/      точка входа
-internal/api/            сборка и запуск сервера, маршруты
+cmd/iss-visibility/      точка входа: собирает конфиг, репозиторий, обработчик и приложение
+cmd/migrate/             миграции: создание таблиц и индекса черновика
+cmd/seed/                заполнение базы данными для показа
+config/config.toml       адрес сервиса и адрес хранилища
+internal/pkg/            Application: регистрация маршрутов, статики и запуск сервера
+internal/app/config/     чтение config.toml через Viper
+internal/app/dsn/        строка подключения к базе из переменных окружения
+internal/app/ds/         модели для кода и миграций
+internal/app/repository/ доступ к данным через gORM
 internal/app/handler/    обработчики запросов
-internal/app/repository/ модель и коллекция точек наблюдения
 templates/               шаблоны трёх страниц и панели вкладок
 resources/styles/        CSS
 resources/icons/         иконки Material Symbols (Apache 2.0)
 resources/fonts/         шрифт Commissioner (SIL Open Font License)
+resources/img/           изображение по умолчанию
+resources/video/         видео по умолчанию
 assets/                  исходники изображений и видео для загрузки в Minio
 ```
 

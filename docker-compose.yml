@@ -1,7 +1,7 @@
 services:
   minio:
     image: minio/minio:latest
-    container_name: iss-visibility-fixes-minio
+    container_name: iss-visibility-minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -14,7 +14,7 @@ services:
 
   minio-init:
     image: minio/mc:latest
-    container_name: iss-visibility-fixes-minio-init
+    container_name: iss-visibility-minio-init
     depends_on:
       - minio
     volumes:
@@ -30,5 +30,33 @@ services:
       mc ls local/iss-visibility;
       "
 
+  postgres:
+    image: postgres:16
+    container_name: iss-visibility-postgres
+    environment:
+      POSTGRES_USER: iss
+      POSTGRES_PASSWORD: iss
+      POSTGRES_DB: iss_visibility
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iss -d iss_visibility"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  adminer:
+    image: adminer:latest
+    container_name: iss-visibility-adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+
 volumes:
   minio-data:
+  postgres-data:

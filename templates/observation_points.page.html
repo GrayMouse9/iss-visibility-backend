@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Точки наблюдения — Время видимости МКС</title>
-    <link rel="stylesheet" href="/static/styles/style.css">
+    <link rel="stylesheet" href="/styles/style.css">
 </head>
 <body>
 <div class="phone">
@@ -32,19 +32,27 @@
 
         <div class="grid">
             {{ range .points }}
-            <a class="card" href="/feed/{{ .ID }}">
-                <img class="card__image" src="{{ .ImageURL }}" alt="{{ .Name }}">
-                <div class="card__head">
-                    <h2 class="card__title">{{ .Name }}</h2>
-                    <span class="round-arrow round-arrow--small"></span>
-                </div>
-                <div class="card__foot">
-                    <span class="card__latitude">{{ printf "%.2f" .LatAbs }}° {{ .LatHemiShort }}</span>
-                    <span class="card__likes">
-                        <span class="card__heart"></span>{{ .Likes }}
-                    </span>
-                </div>
-            </a>
+            <div class="card-wrap">
+                <a class="card" href="/feed/{{ .ID }}">
+                    <img class="card__image" src="{{ .ImageURL }}" alt="{{ .Name }}">
+                    <div class="card__head">
+                        <h2 class="card__title">{{ .Name }}</h2>
+                        <span class="round-arrow round-arrow--small"></span>
+                    </div>
+                    <div class="card__foot">
+                        <span class="card__latitude">{{ printf "%.2f" .LatAbs }}° {{ .LatHemiShort }}</span>
+                        <span class="card__likes">
+                            <span class="card__heart"></span>{{ .Likes }}
+                        </span>
+                    </div>
+                </a>
+                {{/* Форма рядом с карточкой: вложить form в ссылку нельзя. */}}
+                <form class="card-delete" action="/points/delete" method="POST">
+                    <input type="hidden" name="point_id" value="{{ .ID }}">
+                    <input type="hidden" name="min_latitude" value="{{ printf "%.0f" $.min_latitude }}">
+                    <button class="card-delete__button" type="submit">Удалить</button>
+                </form>
+            </div>
             {{ else }}
             <p class="empty">Ничего не найдено</p>
             {{ end }}

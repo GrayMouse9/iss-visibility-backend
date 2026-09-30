@@ -1,6 +1,6 @@
 @font-face {
     font-family: Commissioner;
-    src: url("/static/fonts/commissioner-latin.woff2") format("woff2");
+    src: url("/fonts/commissioner-latin.woff2") format("woff2");
     font-weight: 400 700;
     font-style: normal;
     font-display: swap;
@@ -11,7 +11,7 @@
 
 @font-face {
     font-family: Commissioner;
-    src: url("/static/fonts/commissioner-cyrillic.woff2") format("woff2");
+    src: url("/fonts/commissioner-cyrillic.woff2") format("woff2");
     font-weight: 400 700;
     font-style: normal;
     font-display: swap;
@@ -127,18 +127,18 @@ body {
 }
 
 .tab__icon--feed {
-    -webkit-mask-image: url("/static/icons/feed.svg");
-    mask-image: url("/static/icons/feed.svg");
+    -webkit-mask-image: url("/icons/feed.svg");
+    mask-image: url("/icons/feed.svg");
 }
 
 .tab__icon--add {
-    -webkit-mask-image: url("/static/icons/add.svg");
-    mask-image: url("/static/icons/add.svg");
+    -webkit-mask-image: url("/icons/add.svg");
+    mask-image: url("/icons/add.svg");
 }
 
 .tab__icon--points {
-    -webkit-mask-image: url("/static/icons/tiles.svg");
-    mask-image: url("/static/icons/tiles.svg");
+    -webkit-mask-image: url("/icons/tiles.svg");
+    mask-image: url("/icons/tiles.svg");
 }
 
 .tab__label {
@@ -297,13 +297,13 @@ body {
 
 .action__icon--like {
     background: var(--red);
-    -webkit-mask-image: url("/static/icons/like.svg");
-    mask-image: url("/static/icons/like.svg");
+    -webkit-mask-image: url("/icons/like.svg");
+    mask-image: url("/icons/like.svg");
 }
 
 .action__icon--next {
-    -webkit-mask-image: url("/static/icons/next.svg");
-    mask-image: url("/static/icons/next.svg");
+    -webkit-mask-image: url("/icons/next.svg");
+    mask-image: url("/icons/next.svg");
 }
 
 .action__label {
@@ -413,13 +413,13 @@ body {
     width: 55%;
     height: 55%;
     background: var(--invert);
-    -webkit-mask: url("/static/icons/arrow.svg") center/contain no-repeat;
-    mask: url("/static/icons/arrow.svg") center/contain no-repeat;
+    -webkit-mask: url("/icons/arrow.svg") center/contain no-repeat;
+    mask: url("/icons/arrow.svg") center/contain no-repeat;
 }
 
 .round-arrow--search::after {
-    -webkit-mask-image: url("/static/icons/search.svg");
-    mask-image: url("/static/icons/search.svg");
+    -webkit-mask-image: url("/icons/search.svg");
+    mask-image: url("/icons/search.svg");
 }
 
 .filter {
@@ -585,8 +585,8 @@ body {
     width: 12px;
     height: 12px;
     background: var(--red);
-    -webkit-mask: url("/static/icons/like.svg") center/contain no-repeat;
-    mask: url("/static/icons/like.svg") center/contain no-repeat;
+    -webkit-mask: url("/icons/like.svg") center/contain no-repeat;
+    mask: url("/icons/like.svg") center/contain no-repeat;
 }
 
 .notice {
@@ -606,3 +606,53 @@ body {
 .page::-webkit-scrollbar {
     display: none;
 }
+
+.button {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 14px 0;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--invert);
+    background: var(--accent);
+    border: none;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+}
+
+.button:hover {
+    opacity: .9;
+}
+
+.card-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.card-wrap .card {
+    flex: 1;
+}
+
+.card-delete__button {
+    width: 100%;
+    padding: 8px 0;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--invert);
+    border: none;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+}
+
+.card-delete__button:hover {
+    color: var(--invert);
+    background: var(--danger);
+}
+
