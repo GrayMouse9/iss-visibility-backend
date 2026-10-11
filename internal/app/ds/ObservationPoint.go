@@ -17,8 +17,8 @@ type ObservationPoint struct {
 	ImageURL string `gorm:"type:varchar(200)"`
 	VideoURL string `gorm:"type:varchar(200)"`
 
-	Latitude  float64 `gorm:"not null"`
-	Longitude float64 `gorm:"not null"`
+	Latitude  *float64
+	Longitude *float64
 
 	DateCreated time.Time `gorm:"not null"`
 	DateFormed  *time.Time

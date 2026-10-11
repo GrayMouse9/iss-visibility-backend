@@ -2,13 +2,13 @@ package main
 
 import (
 	"log"
+	"os"
 	"time"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"iss-visibility/internal/app/config"
 	"iss-visibility/internal/app/ds"
 	"iss-visibility/internal/app/dsn"
 )
@@ -23,11 +23,7 @@ func main() {
 		log.Println("файл .env не найден, беру переменные из окружения")
 	}
 
-	cfg, err := config.NewConfig()
-	if err != nil {
-		log.Fatalf("не удалось прочитать конфигурацию: %v", err)
-	}
-	media := cfg.MinioPublicURL
+	media := os.Getenv("MINIO_PUBLIC_URL")
 
 	db, err := gorm.Open(postgres.Open(dsn.FromEnv()), &gorm.Config{})
 	if err != nil {
@@ -65,8 +61,8 @@ func main() {
 			Status:      ds.StatusPublished,
 			ImageURL:    media + "/maunakea.jpg",
 			VideoURL:    media + "/maunakea.mp4",
-			Latitude:    19.8207,
-			Longitude:   -155.4681,
+			Latitude:    ptr(19.8207),
+			Longitude:   ptr(-155.4681),
 			DateCreated: created,
 			DateFormed:  ptr(formed),
 			CreatorID:   users[0].ID,
@@ -77,8 +73,8 @@ func main() {
 			Status:      ds.StatusPublished,
 			ImageURL:    media + "/kittpeak.jpg",
 			VideoURL:    media + "/kittpeak.mp4",
-			Latitude:    31.9583,
-			Longitude:   -111.5967,
+			Latitude:    ptr(31.9583),
+			Longitude:   ptr(-111.5967),
 			DateCreated: created,
 			DateFormed:  ptr(formed),
 			CreatorID:   users[0].ID,
@@ -90,8 +86,8 @@ func main() {
 			Status:      ds.StatusDeleted,
 			ImageURL:    media + "/bmstu.jpg",
 			VideoURL:    media + "/bmstu.mp4",
-			Latitude:    55.7660,
-			Longitude:   37.6849,
+			Latitude:    ptr(55.7660),
+			Longitude:   ptr(37.6849),
 			DateCreated: created,
 			DateFormed:  ptr(formed),
 			CreatorID:   users[0].ID,
@@ -102,8 +98,8 @@ func main() {
 			Status:      ds.StatusPublished,
 			ImageURL:    media + "/alma.jpg",
 			VideoURL:    media + "/alma.mp4",
-			Latitude:    -23.0294,
-			Longitude:   -67.7548,
+			Latitude:    ptr(-23.0294),
+			Longitude:   ptr(-67.7548),
 			DateCreated: created,
 			DateFormed:  ptr(formed),
 			CreatorID:   users[0].ID,
@@ -114,8 +110,8 @@ func main() {
 			Status:      ds.StatusPublished,
 			ImageURL:    media + "/paranal.jpg",
 			VideoURL:    media + "/paranal.mp4",
-			Latitude:    -24.6275,
-			Longitude:   -70.4044,
+			Latitude:    ptr(-24.6275),
+			Longitude:   ptr(-70.4044),
 			DateCreated: created,
 			DateFormed:  ptr(formed),
 			CreatorID:   users[0].ID,
@@ -126,20 +122,19 @@ func main() {
 			Status:      ds.StatusPublished,
 			ImageURL:    media + "/lasilla.jpg",
 			VideoURL:    media + "/lasilla.mp4",
-			Latitude:    -29.2567,
-			Longitude:   -70.7300,
+			Latitude:    ptr(-29.2567),
+			Longitude:   ptr(-70.7300),
 			DateCreated: created,
 			DateFormed:  ptr(formed),
 			CreatorID:   users[0].ID,
 		},
 		{
-			// Ссылки пустые: на страницах подставятся файлы по умолчанию.
+			// Черновик другого пользователя: у текущего место свободно, его черновик
+			// создаётся запросом. Ссылки и координаты пустые — они появляются позже.
 			Name:        "МГТУ им. Н. Э. Баумана",
 			Status:      ds.StatusDraft,
-			Latitude:    45.9646,
-			Longitude:   63.3052,
 			DateCreated: time.Now(),
-			CreatorID:   users[0].ID,
+			CreatorID:   users[2].ID,
 		},
 	}
 	if err := db.Omit("Creator").Create(&points).Error; err != nil {

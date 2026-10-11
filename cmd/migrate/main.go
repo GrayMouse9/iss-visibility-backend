@@ -37,5 +37,23 @@ func main() {
 		log.Fatalf("не удалось создать индекс черновика: %v", err)
 	}
 
+	// Координаты заполняются при публикации, у черновика их нет.
+	for _, column := range []string{"latitude", "longitude"} {
+		err = db.Exec("ALTER TABLE observation_points ALTER COLUMN " + column + " DROP NOT NULL").Error
+		if err != nil {
+			log.Fatalf("не удалось снять NOT NULL с %s: %v", column, err)
+		}
+	}
+
+	// Пользователь, от имени которого работают все методы: авторизация появится в ЛР4.
+	var count int64
+	db.Model(&ds.User{}).Where("id = ?", 1).Count(&count)
+	if count == 0 {
+		user := ds.User{Login: "observer", Password: "observer", IsModerator: false}
+		if err = db.Create(&user).Error; err != nil {
+			log.Fatalf("не удалось создать пользователя по умолчанию: %v", err)
+		}
+	}
+
 	log.Println("Таблицы созданы")
 }

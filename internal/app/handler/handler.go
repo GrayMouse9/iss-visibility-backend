@@ -17,33 +17,34 @@ func NewHandler(r *repository.Repository) *Handler {
 	}
 }
 
-// RegisterHandler Функция, в которой мы отдельно регистрируем маршруты, чтобы не писать все в одном месте
+// RegisterHandler Функция, в которой мы отдельно регистрируем маршруты, чтобы не писать все в одном месте.
+// Адреса разбиты на два домена и начинаются с /api.
 func (h *Handler) RegisterHandler(router *gin.Engine) {
-	router.GET("/feed", h.GetFeed)
-	router.GET("/feed/:id", h.GetFeed)
-	router.GET("/add", h.GetObservationPointDraft)
-	router.GET("/observation_points", h.GetObservationPoints)
+	api := router.Group("/api")
 
-	router.POST("/observation_points", h.CreateObservationPointDraft)
-	router.POST("/observation_points/publish", h.PublishObservationPoint)
-	router.POST("/observation_points/delete", h.DeleteObservationPoint)
+	points := api.Group("/observation_points")
+	{
+		points.GET("", h.GetObservationPoints)
+		points.GET("/feed", h.GetFeed)
+		points.GET("/draft", h.GetObservationPointDraft)
+		points.GET("/:id", h.GetObservationPoint)
+		points.POST("", h.CreateObservationPointDraft)
+		points.PUT("/:id/publish", h.PublishObservationPoint)
+		points.DELETE("/:id", h.DeleteObservationPoint)
+		points.POST("/:id/like", h.SetObservationPointLike)
+	}
+
+	users := api.Group("/users")
+	{
+		users.POST("", h.RegisterUser)
+		users.POST("/login", h.LoginUser)
+		users.POST("/logout", h.LogoutUser)
+	}
 }
 
-// RegisterStatic То же самое, что и с маршрутами, регистрируем статику
-func (h *Handler) RegisterStatic(router *gin.Engine) {
-	router.LoadHTMLGlob("templates/*")
-	router.Static("/styles", "./resources/styles")
-	router.Static("/icons", "./resources/icons")
-	router.Static("/fonts", "./resources/fonts")
-	router.Static("/img", "./resources/img")
-	router.Static("/video", "./resources/video")
-}
-
-// errorHandler для более удобного вывода ошибок
+// errorHandler пишет ошибку в журнал сервера. В теле ответа сообщений не передаём:
+// код состояния — отдельный параметр HTTP-ответа, дублировать его в JSON не нужно.
 func (h *Handler) errorHandler(ctx *gin.Context, errorStatusCode int, err error) {
 	logrus.Error(err.Error())
-	ctx.JSON(errorStatusCode, gin.H{
-		"status":      "error",
-		"description": err.Error(),
-	})
+	ctx.Status(errorStatusCode)
 }

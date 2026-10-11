@@ -1,7 +1,7 @@
 services:
   minio:
     image: minio/minio:latest
-    container_name: iss-visibility-fixed-minio
+    container_name: iss-visibility-minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -14,7 +14,7 @@ services:
 
   minio-init:
     image: minio/mc:latest
-    container_name: iss-visibility-fixed-minio-init
+    container_name: iss-visibility-minio-init
     depends_on:
       - minio
     volumes:
@@ -32,7 +32,7 @@ services:
 
   postgres:
     image: postgres:16
-    container_name: iss-visibility-fixed-postgres
+    container_name: iss-visibility-postgres
     environment:
       POSTGRES_USER: iss
       POSTGRES_PASSWORD: iss
@@ -49,7 +49,7 @@ services:
 
   adminer:
     image: adminer:latest
-    container_name: iss-visibility-fixed-adminer
+    container_name: iss-visibility-adminer
     ports:
       - "8082:8080"
     depends_on:
