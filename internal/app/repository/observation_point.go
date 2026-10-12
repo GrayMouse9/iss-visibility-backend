@@ -140,7 +140,7 @@ func (r *Repository) DraftObservationPoint(userID uint) (ObservationPointWithLik
 
 // Создатель берётся из функции-singleton, с клиента он не принимается.
 // Координаты и ссылки на файлы здесь не заполняются.
-func (r *Repository) CreateObservationPointDraft(userID uint, name, description string) (ds.ObservationPoint, error) {
+func (r *Repository) CreateObservationPointDraft(userID uint, name string) (ds.ObservationPoint, error) {
 	// Индекс idx_one_draft_per_creator не даст создать второй черновик,
 	// но понятную ошибку вместо нарушения ограничения вернуть лучше самим.
 	_, err := r.DraftObservationPoint(userID)
@@ -153,7 +153,6 @@ func (r *Repository) CreateObservationPointDraft(userID uint, name, description 
 
 	point := ds.ObservationPoint{
 		Name:        name,
-		Description: description,
 		Status:      ds.StatusDraft,
 		DateCreated: time.Now(),
 		CreatorID:   userID,
@@ -165,10 +164,11 @@ func (r *Repository) CreateObservationPointDraft(userID uint, name, description 
 }
 
 // Публикация возможна только из черновика и только своего: вернуть назад в черновик нельзя.
-func (r *Repository) PublishObservationPoint(id, userID uint, latitude, longitude float64) error {
+func (r *Repository) PublishObservationPoint(id, userID uint, description string, latitude, longitude float64) error {
 	result := r.db.Model(&ds.ObservationPoint{}).
 		Where("id = ? AND creator_id = ? AND status = ?", id, userID, ds.StatusDraft).
 		Updates(map[string]any{
+			"description": description,
 			"latitude":    latitude,
 			"longitude":   longitude,
 			"status":      ds.StatusPublished,

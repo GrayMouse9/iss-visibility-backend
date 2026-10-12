@@ -24,6 +24,8 @@ const (
 	maxMultipartMemory = 8 << 20
 )
 
+// pathID разбирает идентификатор из адреса. Нечисловое значение и ноль — ошибка
+// запроса, поэтому проверка сразу отвечает 400, а обработчику остаётся выйти.
 func pathID(ctx *gin.Context) (uint, bool) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil || id <= 0 {
@@ -46,7 +48,23 @@ func (h *Handler) respondObservationPoint(
 	case err != nil:
 		h.errorHandler(ctx, http.StatusInternalServerError, err)
 	default:
-		ctx.JSON(http.StatusOK, dto.NewObservationPoint(point, auth.CurrentUserSingleton().ID))
+		ctx.JSON(http.StatusOK, dto.NewObservationPoint(point))
+	}
+}
+
+// То же для ленты: отличается только сериализатором, в её ответе есть признак liked.
+func (h *Handler) respondFeedPoint(
+	ctx *gin.Context,
+	point repository.ObservationPointWithLikes,
+	err error,
+) {
+	switch {
+	case errors.Is(err, repository.ErrNotFound):
+		ctx.Status(http.StatusNotFound)
+	case err != nil:
+		h.errorHandler(ctx, http.StatusInternalServerError, err)
+	default:
+		ctx.JSON(http.StatusOK, dto.NewObservationPointFeed(point))
 	}
 }
 
@@ -71,38 +89,36 @@ func (h *Handler) GetObservationPoints(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.NewObservationPoints(points, user.ID))
+	ctx.JSON(http.StatusOK, dto.NewObservationPointLists(points, user.ID))
 }
 
-// GetFeed GET /api/observation_points/feed — лента без идентификатора:
-// база отдаёт ровно одну строку, первую опубликованную.
+// GetFeed GET /api/observation_points/feed — лента, всегда ровно одна запись.
+// Без параметра отдаётся первая опубликованная услуга, с ?after=<id> — следующая
+// за указанной; когда следующей нет, лента замыкается на первую. Идентификатор
+// приходит параметром запроса, а не частью адреса: отдельного метода «услуга по
+// идентификатору» в сервисе нет.
 func (h *Handler) GetFeed(ctx *gin.Context) {
-	point, err := h.Repository.FirstPublishedObservationPoint(auth.CurrentUserSingleton().ID)
-	h.respondObservationPoint(ctx, point, err)
-}
-
-// GetObservationPoint GET /api/observation_points/:id — услуга по идентификатору,
-// с ?next=true — следующая опубликованная, по кругу через пропуски в идентификаторах.
-func (h *Handler) GetObservationPoint(ctx *gin.Context) {
 	user := auth.CurrentUserSingleton()
-
-	id, ok := pathID(ctx)
-	if !ok {
-		return
-	}
 
 	var (
 		point repository.ObservationPointWithLikes
 		err   error
 	)
 
-	if ctx.Query("next") == "true" {
-		point, err = h.Repository.NextPublishedObservationPoint(user.ID, id)
+	if afterStr := strings.TrimSpace(ctx.Query("after")); afterStr == "" {
+		point, err = h.Repository.FirstPublishedObservationPoint(user.ID)
 	} else {
-		point, err = h.Repository.PublishedObservationPointByID(user.ID, id)
+		var afterID uint64
+		afterID, err = strconv.ParseUint(afterStr, 10, 64)
+		if err != nil || afterID == 0 {
+			ctx.Status(http.StatusBadRequest)
+			return
+		}
+
+		point, err = h.Repository.NextPublishedObservationPoint(user.ID, uint(afterID))
 	}
 
-	h.respondObservationPoint(ctx, point, err)
+	h.respondFeedPoint(ctx, point, err)
 }
 
 // GetObservationPointDraft GET /api/observation_points/draft — черновик текущего
@@ -131,9 +147,10 @@ func (h *Handler) mediaError(ctx *gin.Context, err error) {
 	h.errorHandler(ctx, http.StatusInternalServerError, err)
 }
 
-// CreateObservationPointDraft POST /api/observation_points — создание черновика
-// вместе с файлами изображения и короткого видео. Файлы приходят в multipart-форме,
-// ложатся в Minio, а в базу попадают только ссылки на них.
+// CreateObservationPointDraft POST /api/observation_points — создание черновика:
+// название и файлы изображения и короткого видео. Файлы приходят в multipart-форме,
+// ложатся в Minio, а в базу попадают только имена, сгенерированные на латинице.
+// Описание здесь не принимается — оно задаётся при публикации.
 func (h *Handler) CreateObservationPointDraft(ctx *gin.Context) {
 	user := auth.CurrentUserSingleton()
 
@@ -143,8 +160,7 @@ func (h *Handler) CreateObservationPointDraft(ctx *gin.Context) {
 	}
 
 	name := strings.TrimSpace(ctx.Request.FormValue("name"))
-	description := strings.TrimSpace(ctx.Request.FormValue("description"))
-	if name == "" || description == "" {
+	if name == "" {
 		ctx.Status(http.StatusBadRequest)
 		return
 	}
@@ -176,7 +192,7 @@ func (h *Handler) CreateObservationPointDraft(ctx *gin.Context) {
 		}
 	}
 
-	point, err := h.Repository.CreateObservationPointDraft(user.ID, name, description)
+	point, err := h.Repository.CreateObservationPointDraft(user.ID, name)
 	switch {
 	case errors.Is(err, repository.ErrDraftExists):
 		ctx.Status(http.StatusConflict)
@@ -207,17 +223,21 @@ func (h *Handler) CreateObservationPointDraft(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, dto.NewObservationPoint(created, user.ID))
+	ctx.JSON(http.StatusCreated, dto.NewObservationPoint(created))
 }
 
+// publishRequest — тело публикации. Координаты описаны указателями, чтобы отличить
+// пропущенное поле от переданного нуля: нулевая широта и долгота допустимы.
 type publishRequest struct {
-	Latitude  *float64 `json:"latitude"`
-	Longitude *float64 `json:"longitude"`
+	Description string   `json:"description"`
+	Latitude    *float64 `json:"latitude"`
+	Longitude   *float64 `json:"longitude"`
 }
 
 // PublishObservationPoint PUT /api/observation_points/:id/publish — смена статуса
-// черновика на «опубликован» вместе с полями предметной области. Сам статус
-// с клиента не принимается: его подставляет бизнес-логика.
+// черновика на «опубликован» вместе с описанием и полями предметной области. Сам
+// статус с клиента не принимается: его подставляет бизнес-логика. Публикация
+// необратима — метода возврата в черновик в сервисе нет.
 func (h *Handler) PublishObservationPoint(ctx *gin.Context) {
 	user := auth.CurrentUserSingleton()
 
@@ -232,6 +252,12 @@ func (h *Handler) PublishObservationPoint(ctx *gin.Context) {
 		return
 	}
 
+	description := strings.TrimSpace(request.Description)
+	if description == "" {
+		ctx.Status(http.StatusBadRequest)
+		return
+	}
+
 	if request.Latitude == nil || request.Longitude == nil ||
 		*request.Latitude < minLatitudeLimit || *request.Latitude > maxLatitudeLimit ||
 		*request.Longitude < minLongitudeLimit || *request.Longitude > maxLongitudeLimit {
@@ -239,7 +265,7 @@ func (h *Handler) PublishObservationPoint(ctx *gin.Context) {
 		return
 	}
 
-	err := h.Repository.PublishObservationPoint(id, user.ID, *request.Latitude, *request.Longitude)
+	err := h.Repository.PublishObservationPoint(id, user.ID, description, *request.Latitude, *request.Longitude)
 	switch {
 	case errors.Is(err, repository.ErrNotFound):
 		ctx.Status(http.StatusNotFound)

@@ -27,7 +27,6 @@ func (h *Handler) RegisterHandler(router *gin.Engine) {
 		points.GET("", h.GetObservationPoints)
 		points.GET("/feed", h.GetFeed)
 		points.GET("/draft", h.GetObservationPointDraft)
-		points.GET("/:id", h.GetObservationPoint)
 		points.POST("", h.CreateObservationPointDraft)
 		points.PUT("/:id/publish", h.PublishObservationPoint)
 		points.DELETE("/:id", h.DeleteObservationPoint)

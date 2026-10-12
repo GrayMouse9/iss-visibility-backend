@@ -1,0 +1,19 @@
+version: "2"
+
+# Проверка кода: golangci-lint run ./...
+# Форматирование:  golangci-lint fmt ./...
+
+linters:
+  default: standard
+  settings:
+    errcheck:
+      # Закрытие файла в defer: обрабатывать его ошибку всё равно негде.
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+        - (multipart.File).Close
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
