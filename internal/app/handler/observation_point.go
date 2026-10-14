@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"iss-visibility/internal/app/auth"
 	"iss-visibility/internal/app/dto"
 	"iss-visibility/internal/app/repository"
 )
@@ -68,10 +67,21 @@ func (h *Handler) respondFeedPoint(
 	}
 }
 
-// GetObservationPoints GET /api/observation_points — список опубликованных услуг
-// с фильтрацией по широте на бэкенде.
+// GetObservationPoints GET /api/observation_points — список опубликованных услуг.
+//
+// @Summary Список точек наблюдения
+// @Description Опубликованные услуги с фильтром по минимальной широте. Токен необязателен: без него признак is_mine всегда 0.
+// @Tags Точки наблюдения
+// @Produce json
+// @Security BearerAuth
+// @Param min_latitude query number false "Минимальная широта, от -90 до 90"
+// @Success 200 {array} dto.ObservationPointList
+// @Failure 400 "Недопустимое значение широты"
+// @Failure 401 "Предъявлен негодный токен"
+// @Failure 500
+// @Router /observation_points [get]
 func (h *Handler) GetObservationPoints(ctx *gin.Context) {
-	user := auth.CurrentUserSingleton()
+	userID := currentUserID(ctx)
 
 	minLatitude := minLatitudeLimit
 	if query := strings.TrimSpace(ctx.Query("min_latitude")); query != "" {
@@ -83,22 +93,31 @@ func (h *Handler) GetObservationPoints(ctx *gin.Context) {
 		minLatitude = value
 	}
 
-	points, err := h.Repository.PublishedObservationPoints(user.ID, minLatitude)
+	points, err := h.Repository.PublishedObservationPoints(userID, minLatitude)
 	if err != nil {
 		h.errorHandler(ctx, http.StatusInternalServerError, err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.NewObservationPointLists(points, user.ID))
+	ctx.JSON(http.StatusOK, dto.NewObservationPointLists(points, userID))
 }
 
 // GetFeed GET /api/observation_points/feed — лента, всегда ровно одна запись.
-// Без параметра отдаётся первая опубликованная услуга, с ?after=<id> — следующая
-// за указанной; когда следующей нет, лента замыкается на первую. Идентификатор
-// приходит параметром запроса, а не частью адреса: отдельного метода «услуга по
-// идентификатору» в сервисе нет.
+//
+// @Summary Лента
+// @Description Ровно одна услуга: без параметра — первая, с after — следующая за указанной. Когда следующей нет, лента замыкается на первую.
+// @Tags Точки наблюдения
+// @Produce json
+// @Security BearerAuth
+// @Param after query integer false "Идентификатор предыдущей показанной услуги"
+// @Success 200 {object} dto.ObservationPointFeed
+// @Failure 400 "Недопустимый идентификатор"
+// @Failure 401 "Предъявлен негодный токен"
+// @Failure 404 "Опубликованных услуг нет"
+// @Failure 500
+// @Router /observation_points/feed [get]
 func (h *Handler) GetFeed(ctx *gin.Context) {
-	user := auth.CurrentUserSingleton()
+	userID := currentUserID(ctx)
 
 	var (
 		point repository.ObservationPointWithLikes
@@ -106,7 +125,7 @@ func (h *Handler) GetFeed(ctx *gin.Context) {
 	)
 
 	if afterStr := strings.TrimSpace(ctx.Query("after")); afterStr == "" {
-		point, err = h.Repository.FirstPublishedObservationPoint(user.ID)
+		point, err = h.Repository.FirstPublishedObservationPoint(userID)
 	} else {
 		var afterID uint64
 		afterID, err = strconv.ParseUint(afterStr, 10, 64)
@@ -115,16 +134,26 @@ func (h *Handler) GetFeed(ctx *gin.Context) {
 			return
 		}
 
-		point, err = h.Repository.NextPublishedObservationPoint(user.ID, uint(afterID))
+		point, err = h.Repository.NextPublishedObservationPoint(userID, uint(afterID))
 	}
 
 	h.respondFeedPoint(ctx, point, err)
 }
 
-// GetObservationPointDraft GET /api/observation_points/draft — черновик текущего
-// пользователя, идентификатор не указывается.
+// GetObservationPointDraft GET /api/observation_points/draft — черновик пользователя.
+//
+// @Summary Черновик текущего пользователя
+// @Description Идентификатор не указывается: черновик у пользователя может быть только один.
+// @Tags Точки наблюдения
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} dto.ObservationPoint
+// @Failure 401
+// @Failure 404 "Черновика нет"
+// @Failure 500
+// @Router /observation_points/draft [get]
 func (h *Handler) GetObservationPointDraft(ctx *gin.Context) {
-	point, err := h.Repository.DraftObservationPoint(auth.CurrentUserSingleton().ID)
+	point, err := h.Repository.DraftObservationPoint(currentUserID(ctx))
 	h.respondObservationPoint(ctx, point, err)
 }
 
@@ -147,12 +176,25 @@ func (h *Handler) mediaError(ctx *gin.Context, err error) {
 	h.errorHandler(ctx, http.StatusInternalServerError, err)
 }
 
-// CreateObservationPointDraft POST /api/observation_points — создание черновика:
-// название и файлы изображения и короткого видео. Файлы приходят в multipart-форме,
-// ложатся в Minio, а в базу попадают только имена, сгенерированные на латинице.
-// Описание здесь не принимается — оно задаётся при публикации.
+// CreateObservationPointDraft POST /api/observation_points — создание черновика.
+//
+// @Summary Создание черновика
+// @Description Название и файлы. Файлы уходят в Minio, в базу попадают только ссылки. Описание задаётся при публикации.
+// @Tags Точки наблюдения
+// @Accept mpfd
+// @Produce json
+// @Security BearerAuth
+// @Param name formData string true "Название точки наблюдения"
+// @Param image formData file false "Изображение"
+// @Param video formData file false "Короткое видео"
+// @Success 201 {object} dto.ObservationPoint
+// @Failure 400 "Пустое название или недопустимый тип файла"
+// @Failure 401
+// @Failure 409 "Черновик уже существует"
+// @Failure 500
+// @Router /observation_points [post]
 func (h *Handler) CreateObservationPointDraft(ctx *gin.Context) {
-	user := auth.CurrentUserSingleton()
+	userID := currentUserID(ctx)
 
 	if err := ctx.Request.ParseMultipartForm(maxMultipartMemory); err != nil {
 		ctx.Status(http.StatusBadRequest)
@@ -192,7 +234,7 @@ func (h *Handler) CreateObservationPointDraft(ctx *gin.Context) {
 		}
 	}
 
-	point, err := h.Repository.CreateObservationPointDraft(user.ID, name)
+	point, err := h.Repository.CreateObservationPointDraft(userID, name)
 	switch {
 	case errors.Is(err, repository.ErrDraftExists):
 		ctx.Status(http.StatusConflict)
@@ -217,7 +259,7 @@ func (h *Handler) CreateObservationPointDraft(ctx *gin.Context) {
 	}
 
 	// Перечитываем запись, чтобы в ответ попали ссылки на загруженные файлы.
-	created, err := h.Repository.DraftObservationPoint(user.ID)
+	created, err := h.Repository.DraftObservationPoint(userID)
 	if err != nil {
 		h.errorHandler(ctx, http.StatusInternalServerError, err)
 		return
@@ -234,12 +276,24 @@ type publishRequest struct {
 	Longitude   *float64 `json:"longitude"`
 }
 
-// PublishObservationPoint PUT /api/observation_points/:id/publish — смена статуса
-// черновика на «опубликован» вместе с описанием и полями предметной области. Сам
-// статус с клиента не принимается: его подставляет бизнес-логика. Публикация
-// необратима — метода возврата в черновик в сервисе нет.
+// PublishObservationPoint PUT /api/observation_points/:id/publish — публикация черновика.
+//
+// @Summary Публикация услуги
+// @Description Переводит черновик в опубликованные вместе с описанием и координатами. Статус с клиента не принимается, операция необратима.
+// @Tags Точки наблюдения
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path integer true "Идентификатор черновика"
+// @Param request body handler.publishRequest true "Описание и координаты"
+// @Success 200 {object} dto.ObservationPoint
+// @Failure 400 "Пустое описание или координаты вне допустимых границ"
+// @Failure 401
+// @Failure 404 "Черновик не найден или принадлежит другому пользователю"
+// @Failure 500
+// @Router /observation_points/{id}/publish [put]
 func (h *Handler) PublishObservationPoint(ctx *gin.Context) {
-	user := auth.CurrentUserSingleton()
+	userID := currentUserID(ctx)
 
 	id, ok := pathID(ctx)
 	if !ok {
@@ -265,7 +319,7 @@ func (h *Handler) PublishObservationPoint(ctx *gin.Context) {
 		return
 	}
 
-	err := h.Repository.PublishObservationPoint(id, user.ID, description, *request.Latitude, *request.Longitude)
+	err := h.Repository.PublishObservationPoint(id, userID, description, *request.Latitude, *request.Longitude)
 	switch {
 	case errors.Is(err, repository.ErrNotFound):
 		ctx.Status(http.StatusNotFound)
@@ -275,21 +329,32 @@ func (h *Handler) PublishObservationPoint(ctx *gin.Context) {
 		return
 	}
 
-	point, err := h.Repository.PublishedObservationPointByID(user.ID, id)
+	point, err := h.Repository.PublishedObservationPointByID(userID, id)
 	h.respondObservationPoint(ctx, point, err)
 }
 
-// DeleteObservationPoint DELETE /api/observation_points/:id — только логическое
-// удаление и только своей услуги.
+// DeleteObservationPoint DELETE /api/observation_points/:id — логическое удаление.
+//
+// @Summary Удаление услуги
+// @Description Логическое удаление: запись остаётся в базе со статусом «удалена».
+// @Tags Точки наблюдения
+// @Security BearerAuth
+// @Param id path integer true "Идентификатор услуги"
+// @Success 204 "Услуга удалена"
+// @Failure 400 "Недопустимый идентификатор"
+// @Failure 401
+// @Failure 404 "Услуга не найдена или принадлежит другому пользователю"
+// @Failure 500
+// @Router /observation_points/{id} [delete]
 func (h *Handler) DeleteObservationPoint(ctx *gin.Context) {
-	user := auth.CurrentUserSingleton()
+	userID := currentUserID(ctx)
 
 	id, ok := pathID(ctx)
 	if !ok {
 		return
 	}
 
-	err := h.Repository.DeleteObservationPoint(id, user.ID)
+	err := h.Repository.DeleteObservationPoint(id, userID)
 	switch {
 	case errors.Is(err, repository.ErrNotFound):
 		ctx.Status(http.StatusNotFound)
@@ -304,10 +369,24 @@ type likeRequest struct {
 	Value *int `json:"value"`
 }
 
-// SetObservationPointLike POST /api/observation_points/:id/like — отметка текущего
-// пользователя: 1 ставит, 0 снимает.
+// SetObservationPointLike POST /api/observation_points/:id/like — отметка «нравится».
+//
+// @Summary Отметка «нравится»
+// @Description Значение 1 ставит отметку текущего пользователя, 0 снимает. Повторный вызов с тем же значением ничего не меняет.
+// @Tags Точки наблюдения
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path integer true "Идентификатор услуги"
+// @Param request body handler.likeRequest true "Значение отметки: 0 или 1"
+// @Success 200 {object} dto.ObservationPoint
+// @Failure 400 "Значение отличается от 0 и 1"
+// @Failure 401
+// @Failure 404 "Услуга не найдена"
+// @Failure 500
+// @Router /observation_points/{id}/like [post]
 func (h *Handler) SetObservationPointLike(ctx *gin.Context) {
-	user := auth.CurrentUserSingleton()
+	userID := currentUserID(ctx)
 
 	id, ok := pathID(ctx)
 	if !ok {
@@ -325,7 +404,7 @@ func (h *Handler) SetObservationPointLike(ctx *gin.Context) {
 		return
 	}
 
-	err := h.Repository.SetObservationPointLike(user.ID, id, *request.Value)
+	err := h.Repository.SetObservationPointLike(userID, id, *request.Value)
 	switch {
 	case errors.Is(err, repository.ErrNotFound):
 		ctx.Status(http.StatusNotFound)
@@ -335,6 +414,6 @@ func (h *Handler) SetObservationPointLike(ctx *gin.Context) {
 		return
 	}
 
-	point, err := h.Repository.PublishedObservationPointByID(user.ID, id)
+	point, err := h.Repository.PublishedObservationPointByID(userID, id)
 	h.respondObservationPoint(ctx, point, err)
 }

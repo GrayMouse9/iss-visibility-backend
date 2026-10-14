@@ -1,0 +1,429 @@
+basePath: /api
+definitions:
+  dto.ObservationPoint:
+    properties:
+      date_created:
+        type: string
+      date_formed:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      image_url:
+        type: string
+      latitude:
+        type: number
+      likes:
+        type: integer
+      longitude:
+        type: number
+      name:
+        type: string
+      video_url:
+        type: string
+    type: object
+  dto.ObservationPointFeed:
+    properties:
+      date_created:
+        type: string
+      date_formed:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      image_url:
+        type: string
+      latitude:
+        type: number
+      liked:
+        type: integer
+      likes:
+        type: integer
+      longitude:
+        type: number
+      name:
+        type: string
+      video_url:
+        type: string
+    type: object
+  dto.ObservationPointList:
+    properties:
+      date_created:
+        type: string
+      date_formed:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      image_url:
+        type: string
+      is_mine:
+        type: integer
+      latitude:
+        type: number
+      likes:
+        type: integer
+      longitude:
+        type: number
+      name:
+        type: string
+      video_url:
+        type: string
+    type: object
+  dto.User:
+    properties:
+      id:
+        type: integer
+      is_moderator:
+        type: boolean
+      login:
+        type: string
+    type: object
+  handler.likeRequest:
+    properties:
+      value:
+        type: integer
+    type: object
+  handler.loginRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    type: object
+  handler.loginResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      token_type:
+        type: string
+    type: object
+  handler.publishRequest:
+    properties:
+      description:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+    type: object
+  handler.registerRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    type: object
+host: localhost:3001
+info:
+  contact: {}
+  description: Сервис определения времени видимости МКС с Земли. Предметная услуга
+    — точка наблюдения.
+  title: ISS Visibility API
+  version: "1.0"
+paths:
+  /observation_points:
+    get:
+      description: 'Опубликованные услуги с фильтром по минимальной широте. Токен
+        необязателен: без него признак is_mine всегда 0.'
+      parameters:
+      - description: Минимальная широта, от -90 до 90
+        in: query
+        name: min_latitude
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.ObservationPointList'
+            type: array
+        "400":
+          description: Недопустимое значение широты
+        "401":
+          description: Предъявлен негодный токен
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Список точек наблюдения
+      tags:
+      - Точки наблюдения
+    post:
+      consumes:
+      - multipart/form-data
+      description: Название и файлы. Файлы уходят в Minio, в базу попадают только
+        ссылки. Описание задаётся при публикации.
+      parameters:
+      - description: Название точки наблюдения
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: Изображение
+        in: formData
+        name: image
+        type: file
+      - description: Короткое видео
+        in: formData
+        name: video
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ObservationPoint'
+        "400":
+          description: Пустое название или недопустимый тип файла
+        "401":
+          description: Unauthorized
+        "409":
+          description: Черновик уже существует
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Создание черновика
+      tags:
+      - Точки наблюдения
+  /observation_points/{id}:
+    delete:
+      description: 'Логическое удаление: запись остаётся в базе со статусом «удалена».'
+      parameters:
+      - description: Идентификатор услуги
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Услуга удалена
+        "400":
+          description: Недопустимый идентификатор
+        "401":
+          description: Unauthorized
+        "404":
+          description: Услуга не найдена или принадлежит другому пользователю
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Удаление услуги
+      tags:
+      - Точки наблюдения
+  /observation_points/{id}/like:
+    post:
+      consumes:
+      - application/json
+      description: Значение 1 ставит отметку текущего пользователя, 0 снимает. Повторный
+        вызов с тем же значением ничего не меняет.
+      parameters:
+      - description: Идентификатор услуги
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 'Значение отметки: 0 или 1'
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.likeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ObservationPoint'
+        "400":
+          description: Значение отличается от 0 и 1
+        "401":
+          description: Unauthorized
+        "404":
+          description: Услуга не найдена
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Отметка «нравится»
+      tags:
+      - Точки наблюдения
+  /observation_points/{id}/publish:
+    put:
+      consumes:
+      - application/json
+      description: Переводит черновик в опубликованные вместе с описанием и координатами.
+        Статус с клиента не принимается, операция необратима.
+      parameters:
+      - description: Идентификатор черновика
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Описание и координаты
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.publishRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ObservationPoint'
+        "400":
+          description: Пустое описание или координаты вне допустимых границ
+        "401":
+          description: Unauthorized
+        "404":
+          description: Черновик не найден или принадлежит другому пользователю
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Публикация услуги
+      tags:
+      - Точки наблюдения
+  /observation_points/draft:
+    get:
+      description: 'Идентификатор не указывается: черновик у пользователя может быть
+        только один.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ObservationPoint'
+        "401":
+          description: Unauthorized
+        "404":
+          description: Черновика нет
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Черновик текущего пользователя
+      tags:
+      - Точки наблюдения
+  /observation_points/feed:
+    get:
+      description: 'Ровно одна услуга: без параметра — первая, с after — следующая
+        за указанной. Когда следующей нет, лента замыкается на первую.'
+      parameters:
+      - description: Идентификатор предыдущей показанной услуги
+        in: query
+        name: after
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ObservationPointFeed'
+        "400":
+          description: Недопустимый идентификатор
+        "401":
+          description: Предъявлен негодный токен
+        "404":
+          description: Опубликованных услуг нет
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Лента
+      tags:
+      - Точки наблюдения
+  /users:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт пользователя. Пароль хранится только в виде bcrypt-хэша.
+      parameters:
+      - description: Логин и пароль
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.registerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.User'
+        "400":
+          description: Пустой логин или пароль
+        "409":
+          description: Логин занят
+        "500":
+          description: Internal Server Error
+      summary: Регистрация пользователя
+      tags:
+      - Пользователи
+  /users/login:
+    post:
+      consumes:
+      - application/json
+      description: Проверяет пару логин-пароль и выдаёт JWT на срок из настроек сервиса.
+      parameters:
+      - description: Логин и пароль
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.loginResponse'
+        "400":
+          description: Тело запроса не разобрано
+        "401":
+          description: Неверный логин или пароль
+        "500":
+          description: Internal Server Error
+      summary: Вход
+      tags:
+      - Пользователи
+  /users/logout:
+    post:
+      description: Помещает предъявленный токен в чёрный список Redis до конца его
+        срока действия.
+      responses:
+        "204":
+          description: Токен отозван
+        "401":
+          description: Токен отсутствует, негоден или уже отозван
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Выход
+      tags:
+      - Пользователи
+securityDefinitions:
+  BearerAuth:
+    description: Токен выдаёт POST /api/users/login. Значение заголовка — "Bearer
+      <токен>".
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

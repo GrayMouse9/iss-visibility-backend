@@ -57,7 +57,7 @@ func (r *Repository) PublishedObservationPoints(userID uint, minLatitude float64
 }
 
 func (r *Repository) PublishedObservationPointByID(userID, id uint) (ObservationPointWithLikes, error) {
-	// тут мы пользуемся «курсором»
+	// Единственный метод, написанный на чистом SQL: остальные собраны средствами GORM.
 	query := `SELECT observation_points.id, name, description, status, image_url, video_url,
 	                 latitude, longitude, date_created, date_formed, creator_id,
 	                 COUNT(observation_point_likes.id) AS likes,
@@ -68,7 +68,6 @@ func (r *Repository) PublishedObservationPointByID(userID, id uint) (Observation
 	          WHERE observation_points.id = $2 AND status = $3
 	          GROUP BY observation_points.id`
 
-	// Создание курсора (строковый указатель)
 	row := r.db.Raw(query, userID, id, ds.StatusPublished).Row()
 
 	point := ObservationPointWithLikes{}
@@ -78,7 +77,6 @@ func (r *Repository) PublishedObservationPointByID(userID, id uint) (Observation
 		dateFormed sql.NullTime
 	)
 
-	// Сканирование строки в структуру
 	err := row.Scan(
 		&point.ID,
 		&point.Name,
@@ -138,7 +136,7 @@ func (r *Repository) DraftObservationPoint(userID uint) (ObservationPointWithLik
 		Where("status = ? AND creator_id = ?", ds.StatusDraft, userID))
 }
 
-// Создатель берётся из функции-singleton, с клиента он не принимается.
+// Создатель берётся из токена, с клиента он не принимается.
 // Координаты и ссылки на файлы здесь не заполняются.
 func (r *Repository) CreateObservationPointDraft(userID uint, name string) (ds.ObservationPoint, error) {
 	// Индекс idx_one_draft_per_creator не даст создать второй черновик,

@@ -1,2 +1,11 @@
-ServiceHost = "localhost"
+ServiceHost = "0.0.0.0"
 ServicePort = 3001
+
+[JWT]
+TTL = "24h"
+
+[Redis]
+Host = "localhost"
+Port = 6379
+DB = 0
+

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
@@ -47,6 +48,18 @@ func main() {
 		{Login: "polaris", Password: "polaris"},
 		{Login: "antares", Password: "antares"},
 	}
+
+	// В поле Password пока лежит открытый пароль — заменяем его на bcrypt-хэш.
+	// Открытые пароли остаются только в этом файле, чтобы было чем входить при показе.
+	for i := range users {
+		hash, err := bcrypt.GenerateFromPassword([]byte(users[i].Password), bcrypt.DefaultCost)
+		if err != nil {
+			log.Fatalf("не удалось захэшировать пароль %q: %v", users[i].Login, err)
+		}
+
+		users[i].Password = string(hash)
+	}
+
 	if err := db.Create(&users).Error; err != nil {
 		log.Fatalf("не удалось создать пользователей: %v", err)
 	}

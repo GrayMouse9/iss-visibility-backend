@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// FromEnv собирает строку подключения к PostgreSQL из переменных окружения.
 func FromEnv() string {
 	host := os.Getenv("DB_HOST")
 	if host == "" {

@@ -12,8 +12,16 @@ linters:
         - (io.Closer).Close
         - (*os.File).Close
         - (multipart.File).Close
+  # Папка docs создаётся утилитой swag: править её бессмысленно,
+  # при следующей генерации изменения всё равно пропадут.
+  exclusions:
+    paths:
+      - docs
 
 formatters:
   enable:
     - gofmt
     - goimports
+  exclusions:
+    paths:
+      - docs

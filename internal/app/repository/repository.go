@@ -52,7 +52,7 @@ func New(s *Settings) (*Repository, error) {
 		return nil, err
 	}
 
-	// Бакет наполняется контейнером minio-init, но приложение не должно падать, если его нет.
+	// Бакет наполняет контейнер minio-init; если его нет, создаём сами.
 	exists, err := client.BucketExists(context.Background(), s.MinioBucket)
 	if err != nil {
 		return nil, err

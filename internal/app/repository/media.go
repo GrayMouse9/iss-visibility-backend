@@ -60,8 +60,8 @@ func mediaType(header *multipart.FileHeader, allowed map[string]string) (string,
 	return contentType, extension, nil
 }
 
-// ValidateImage и ValidateVideo проверяют тип файла до создания записи,
-// чтобы отказ не оставил в базе пустой черновик.
+// ValidateImage проверяет тип файла до создания записи, чтобы отказ
+// не оставил в базе пустой черновик. То же делает ValidateVideo.
 func ValidateImage(header *multipart.FileHeader) error {
 	_, _, err := mediaType(header, allowedImages)
 

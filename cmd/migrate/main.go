@@ -45,15 +45,5 @@ func main() {
 		}
 	}
 
-	// Пользователь, от имени которого работают все методы: авторизация появится в ЛР4.
-	var count int64
-	db.Model(&ds.User{}).Where("id = ?", 1).Count(&count)
-	if count == 0 {
-		user := ds.User{Login: "observer", Password: "observer", IsModerator: false}
-		if err = db.Create(&user).Error; err != nil {
-			log.Fatalf("не удалось создать пользователя по умолчанию: %v", err)
-		}
-	}
-
 	log.Println("Таблицы созданы")
 }
