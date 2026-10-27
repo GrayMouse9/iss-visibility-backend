@@ -1,6 +1,6 @@
 services:
   minio:
-    image: minio/minio:latest
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     container_name: iss-visibility-minio
     command: server /data --console-address ":9001"
     environment:
@@ -13,7 +13,7 @@ services:
       - minio-data:/data
 
   minio-init:
-    image: minio/mc:latest
+    image: pgsty/mc:RELEASE.2026-10-25T00-00-00Z
     container_name: iss-visibility-minio-init
     depends_on:
       - minio

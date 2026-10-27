@@ -70,14 +70,12 @@ func (h *Handler) respondFeedPoint(
 // GetObservationPoints GET /api/observation_points — список опубликованных услуг.
 //
 // @Summary Список точек наблюдения
-// @Description Опубликованные услуги с фильтром по минимальной широте. Токен необязателен: без него признак is_mine всегда 0.
+// @Description Опубликованные услуги с фильтром по минимальной широте. Без токена или с недействительным токеном запрос выполняется как гостевой: is_mine всегда 0.
 // @Tags Точки наблюдения
 // @Produce json
-// @Security BearerAuth
 // @Param min_latitude query number false "Минимальная широта, от -90 до 90"
 // @Success 200 {array} dto.ObservationPointList
 // @Failure 400 "Недопустимое значение широты"
-// @Failure 401 "Предъявлен негодный токен"
 // @Failure 500
 // @Router /observation_points [get]
 func (h *Handler) GetObservationPoints(ctx *gin.Context) {
@@ -105,14 +103,12 @@ func (h *Handler) GetObservationPoints(ctx *gin.Context) {
 // GetFeed GET /api/observation_points/feed — лента, всегда ровно одна запись.
 //
 // @Summary Лента
-// @Description Ровно одна услуга: без параметра — первая, с after — следующая за указанной. Когда следующей нет, лента замыкается на первую.
+// @Description Ровно одна услуга: без параметра — первая, с after — следующая за указанной. Когда следующей нет, лента замыкается на первую. Без токена или с недействительным токеном запрос выполняется как гостевой: liked всегда 0.
 // @Tags Точки наблюдения
 // @Produce json
-// @Security BearerAuth
 // @Param after query integer false "Идентификатор предыдущей показанной услуги"
 // @Success 200 {object} dto.ObservationPointFeed
 // @Failure 400 "Недопустимый идентификатор"
-// @Failure 401 "Предъявлен негодный токен"
 // @Failure 404 "Опубликованных услуг нет"
 // @Failure 500
 // @Router /observation_points/feed [get]

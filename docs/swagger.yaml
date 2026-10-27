@@ -129,8 +129,9 @@ info:
 paths:
   /observation_points:
     get:
-      description: 'Опубликованные услуги с фильтром по минимальной широте. Токен
-        необязателен: без него признак is_mine всегда 0.'
+      description: 'Опубликованные услуги с фильтром по минимальной широте. Без токена
+        или с недействительным токеном запрос выполняется как гостевой: is_mine всегда
+        0.'
       parameters:
       - description: Минимальная широта, от -90 до 90
         in: query
@@ -147,12 +148,8 @@ paths:
             type: array
         "400":
           description: Недопустимое значение широты
-        "401":
-          description: Предъявлен негодный токен
         "500":
           description: Internal Server Error
-      security:
-      - BearerAuth: []
       summary: Список точек наблюдения
       tags:
       - Точки наблюдения
@@ -321,7 +318,9 @@ paths:
   /observation_points/feed:
     get:
       description: 'Ровно одна услуга: без параметра — первая, с after — следующая
-        за указанной. Когда следующей нет, лента замыкается на первую.'
+        за указанной. Когда следующей нет, лента замыкается на первую. Без токена
+        или с недействительным токеном запрос выполняется как гостевой: liked всегда
+        0.'
       parameters:
       - description: Идентификатор предыдущей показанной услуги
         in: query
@@ -336,14 +335,10 @@ paths:
             $ref: '#/definitions/dto.ObservationPointFeed'
         "400":
           description: Недопустимый идентификатор
-        "401":
-          description: Предъявлен негодный токен
         "404":
           description: Опубликованных услуг нет
         "500":
           description: Internal Server Error
-      security:
-      - BearerAuth: []
       summary: Лента
       tags:
       - Точки наблюдения

@@ -94,8 +94,8 @@ func WithAuthCheck(cfg *config.Config, rd *redis.Client, requireModerator bool) 
 	}
 }
 
-// WithOptionalAuth пропускает запрос без токена: обработчик увидит гостя.
-// Негодный токен всё равно отвергается: клиент должен узнать, что тот не работает.
+// WithOptionalAuth пропускает запрос без годного токена как гостевой.
+// Истёкший или отозванный токен не блокирует публичное чтение.
 func WithOptionalAuth(cfg *config.Config, rd *redis.Client) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		token := tokenFromHeader(ctx)
@@ -107,7 +107,7 @@ func WithOptionalAuth(cfg *config.Config, rd *redis.Client) gin.HandlerFunc {
 		claims, err := checkToken(ctx, cfg, rd, token)
 		switch {
 		case errors.Is(err, errTokenInvalid):
-			ctx.AbortWithStatus(http.StatusUnauthorized)
+			ctx.Next()
 			return
 		case err != nil:
 			logrus.Error(err.Error())
